@@ -32,6 +32,8 @@ def asp_args(resp=None, text=''):
 
 
 class Page(object):
+    ''' Abstract base class for Page objects.
+    '''
     SLEEP_DURATION = 0
     ASP_ARGS = {}
     URL = ''
