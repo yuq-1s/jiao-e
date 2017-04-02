@@ -35,14 +35,13 @@ class Page(object):
     ''' Abstract base class for Page objects.
     '''
     SLEEP_DURATION = 0
-    ASP_ARGS = {}
     URL = ''
 
     def __init__(self, sess, text=''):
         assert self.URL, 'Bad Page class: Empty URL'
         assert self.SLEEP_DURATION, 'Bad Page class: Empty SLEEP_DURATION'
         self.sess = sess
-        self.ASP_ARGS = asp_args(text if text else self.get(self.URL))
+        self.asp = asp_args(text if text else self.get(self.URL))
 
     @classmethod
     def _ensure(cls, func):
@@ -71,7 +70,7 @@ class Page(object):
     @_ensure
     def post(self, data, *args, **kw):
         if '__VIEWSTATE' not in data:
-            data.update(self.ASP_ARGS)
+            data.update(self.asp)
         return self.sess.post(self.URL, data, *args, **kw)
 
 
@@ -93,7 +92,7 @@ class RobustPage(Page):
         except SessionOutdated:
             self.refresh()
         except requests.exceptions.HTTPError:
-            self.ASP_ARGS = asp_args(self.get())
+            self.asp = asp_args(self.get())
 
     def refresh(self):
         self.sess = login(self.user, self.passwd)

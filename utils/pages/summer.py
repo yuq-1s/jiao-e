@@ -1,7 +1,6 @@
 # FIXME Replace HtmlResponse with lxml or something for performance.
 from .. import SUMMER_URL, SUMMER_CHECK_URL
-from .. import asp_args
-from . import Page
+from . import asp_args, Page
 from scrapy.http import HtmlResponse as hr
 import requests as rq
 import sys
