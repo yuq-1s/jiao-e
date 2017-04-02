@@ -8,7 +8,6 @@ import requests
 import logging
 
 logger = logging.getLogger()
-SLEEP_DURATION = 2
 
 
 def add_selector(html):
@@ -41,17 +40,19 @@ class Page(object):
     ''' Abstract base class for Page objects.
     '''
     URL = ''
+    SLEEP_DURATION = 0
 
     def __init__(self, sess, html=''):
         assert self.URL, 'Bad Page class: Empty URL'
+        assert self.SLEEP_DURATION, 'Bad Page class: Empty SLEEP_DURATION'
         self.sess = sess
         self.selector = add_selector(html if html else self.get(self.URL))
         self.asp = asp_args(self.selector)
 
     def _ensure(func):
         @wraps(func)
-        def wrapper(*args, **kw):
-            resp = func(*args, **kw)
+        def wrapper(self, *args, **kw):
+            resp = func(self, *args, **kw)
             resp.raise_for_status()
             while True:
                 try:
@@ -59,10 +60,10 @@ class Page(object):
                         raise SessionOutdated
                     message = unquote(resp.url.split('message=')[1])
                     if '刷新' in message:
-                        sleep(SLEEP_DURATION)
+                        sleep(self.SLEEP_DURATION)
                     else:
                         logger.debug(message)
-                    resp = func(*args, **kw)
+                    resp = func(self, *args, **kw)
                 except IndexError:
                     return resp
         return wrapper

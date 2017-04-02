@@ -1,6 +1,9 @@
 from . import Page
 
+
 class LessonPage(Page):
+    SLEEP_DURATION = 2
+
     def __init__(self, sess, html='', url=''):
         if url:
             self.URL = url
