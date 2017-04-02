@@ -17,6 +17,7 @@ from PIL import Image
 from io import BytesIO
 from pytesseract import image_to_string
 from logging import getLogger
+import pickle
 
 def find_between( s, first, last ):
     try:
@@ -53,36 +54,41 @@ def post_data(sess, soup, user, secret):
 
 def login(user, secret):
     logger = getLogger(__name__)
-    for try_count in range(10):
-        # Get Session object
-        sess = Session()
+    try:
+        with open('/tmp/cookie.pickle', 'rb') as f:
+            sess = pickle.load(f)
+            # TODO: Verify the sesion is not out dated.
+            return sess
+    except FileNotFoundError:
+        for try_count in range(10):
+            # Get Session object
+            sess = Session()
 
-        # Store ASP.NetSessionId in sess
-        resp = sess.get('http://electsys.sjtu.edu.cn/edu/login.aspx')
+            # Store ASP.NetSessionId in sess
+            resp = sess.get('http://electsys.sjtu.edu.cn/edu/login.aspx')
 
-        # Prepare for post
-        soup = BeautifulSoup(resp.text, 'html.parser')
-        post_url = 'https://jaccount.sjtu.edu.cn/jaccount/ulogin'
+            # Prepare for post
+            soup = BeautifulSoup(resp.text, 'html.parser')
+            post_url = 'https://jaccount.sjtu.edu.cn/jaccount/ulogin'
 
-        # Post username and password and get authorization url
-        auth_resp = sess.post(post_url, data = post_data(sess, soup, user, secret))
-        soup = BeautifulSoup(auth_resp.text, 'html.parser')
-        try:
-            auth_url = soup.find('meta', {'http-equiv':'refresh'})['content'].split('url=')[1]
+            # Post username and password and get authorization url
+            auth_resp = sess.post(post_url, data = post_data(sess, soup, user, secret))
+            soup = BeautifulSoup(auth_resp.text, 'html.parser')
+            try:
+                auth_url = soup.find('meta', {'http-equiv':'refresh'})['content'].split('url=')[1]
 
-            # Get authorized
-            sess.get(auth_url)
+                # Get authorized
+                sess.get(auth_url)
 
-            logger.info("Login succeeded!")
-            with open("cookie.txt", 'w') as f:
-                f.write(find_between(str(sess.cookies),
-                                     'ASP.NET_SessionId=', ' '))
-            return sess# , prepare_form(sess)
-        except TypeError:
-            logger.warning("The %d attempt to login failed ..." % try_count)
-    logger.error("Login failed...")
-    print("Are you sure about the username and password?")
-    exit(1)
+                logger.info("Login succeeded!")
+                with open("/tmp/cookie.pickle", 'wb') as f:
+                    pickle.dump(sess, f)
+                return sess# , prepare_form(sess)
+            except TypeError:
+                logger.warning("The %d attempt to login failed ..." % try_count)
+        logger.error("Login failed...")
+        print("Are you sure about the username and password?")
+        exit(1)
 
 def prepare_cookie(sess):
     ele_cookies_list = ['ASP.NET_SessionId', 'mail_test_cookie']
