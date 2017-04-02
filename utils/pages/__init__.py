@@ -10,18 +10,22 @@ import logging
 logger = logging.getLogger()
 
 
-def asp_args(resp=None, text=''):
+def add_selector(html):
+    if isinstance(html, str):
+        html = hr(url='', body=html, encoding='utf-8')
+    elif isinstance(html, requests.Response) and not hasattr(html, 'css'):
+        html = hr(url=html.url, body=html.text, encoding='utf-8')
+
+    if not isinstance(html, hr):
+        raise(TypeError('Bad argument: expected str or requests.Response'
+                        ' or scrapy.http.HtmlResponse, given %s' % type(html)))
+
+
+def asp_args(resp):
     ''' Parse "__xx" arguments (such as __VIEWSTATE) from HtmlResponse
     '''
-    if isinstance(resp, str):
-        resp = hr(url='', body=resp, encoding='utf-8')
-    elif isinstance(resp, requests.Response) and not hasattr(resp, 'css'):
-        resp = hr(url=resp.url, body=resp.text, encoding='utf-8')
-
     if not isinstance(resp, hr):
-        raise(TypeError('Bad argument: expected str or requests.Response'
-                        ' or scrapy.http.HtmlResponse, given %s' % type(resp)))
-
+        resp = add_selector(resp)
     ret = {}
     for tag in resp.css('input'):
         name = tag.xpath('./@name').extract_first()
@@ -37,11 +41,12 @@ class Page(object):
     SLEEP_DURATION = 0
     URL = ''
 
-    def __init__(self, sess, text=''):
+    def __init__(self, sess, html=''):
         assert self.URL, 'Bad Page class: Empty URL'
         assert self.SLEEP_DURATION, 'Bad Page class: Empty SLEEP_DURATION'
         self.sess = sess
-        self.asp = asp_args(text if text else self.get(self.URL))
+        self.selector = add_selector(html if html else self.get(self.URL))
+        self.asp = asp_args(self.selector)
 
     @classmethod
     def _ensure(cls, func):
@@ -77,7 +82,7 @@ class Page(object):
 class RobustPage(Page):
     CHECK_URL = ''
 
-    def __init__(self, sess, text, user, passwd):
+    def __init__(self, sess, html, user, passwd):
         assert self.CHECK_URL, 'Bad Page class: Empty CHECK_URL'
         super().__init__()
         self.user = user
