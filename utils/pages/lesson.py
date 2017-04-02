@@ -17,3 +17,6 @@ class LessonPage(Page):
             info.insert(0, tr.xpath('.//input/@value').extract_first())
             yield info
 
+    def select_course(self, bsid):
+        return self.post({'LessonTime1$btnChoose': '选定此教师',
+                   'myradiogroup': bsid})

@@ -1,5 +1,5 @@
 # FIXME Replace HtmlResponse with lxml or something for performance.
-from .. import SUMMER_URL
+from .. import SUMMER_URL, SUBMIT_URL
 from . import Page
 from .lesson import LessonPage
 
@@ -20,3 +20,7 @@ class SummerPage(Page):
         return LessonPage(self.sess,
                           self.post({'myradiogroup': course_id,
                                      'lessonArrange': '课程安排'}))
+
+    def submit(self):
+        return self.sess.head(SUBMIT_URL)
+
