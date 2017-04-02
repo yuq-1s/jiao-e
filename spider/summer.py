@@ -1,32 +1,20 @@
 #! /usr/bin/env python3
 
 # FIXME Replace HtmlResponse with lxml or something for performance.
-from . import ELECT_URL
+from . import SUMMER_URL, SUMMER_CHECK_URL
+from .utils import asp_args
 from scrapy.http import HtmlResponse as hr
 import requests as rq
 import sys
 from time import sleep
 
 # 1 hai xuan; 2 qiang xuan; 3 di san lun
-SUMMER_URL = ELECT_URL + 'ShortSession.aspx'
 # Provide new cookies.
 try:
     MY_COOKIES = {'ASP.NET_SessionId': sys.argv[1]}
 except IndexError:
     print('Usage: %s <cookie value of ASP.NET_SessionId>')
     sys.exit()
-
-
-def asp_args(resp):
-    ''' Parse "__xx" arguments (such as __VIEWSTATE) from HtmlResponse
-    '''
-    ret = {}
-    for tag in resp.css('input'):
-        name = tag.xpath('./@name').extract_first()
-        value = tag.xpath('./@value').extract_first()
-        if name and name.startswith('__'):
-            ret.update({name: value})
-    return ret
 
 
 class RadioForm(object):
@@ -45,8 +33,7 @@ class Spider(object):
         print('Init...')
 
         # Get authorized. # 1 hai xuan; 2 qiang xuan; 3 di san lun
-        resp = rq.get(ELECT_URL+'ShortSessionCheck.aspx?xklc=%d' % 1,
-                      cookies=MY_COOKIES)
+        resp = rq.get(SUMMER_CHECK_URL, cookies=MY_COOKIES)
         self.courses = hr(url=resp.url, body=resp.text, encoding='utf-8')
         self.form = RadioForm(asp_args(self.courses))
 
