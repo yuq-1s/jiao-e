@@ -1,4 +1,4 @@
-from jaccount import login
+from ..jaccount import login
 from urllib.parse import unquote
 from time import sleep
 from utils import SessionOutdated
@@ -8,6 +8,7 @@ import requests
 import logging
 
 logger = logging.getLogger()
+SLEEP_DURATION = 2
 
 
 def add_selector(html):
@@ -19,6 +20,7 @@ def add_selector(html):
     if not isinstance(html, hr):
         raise(TypeError('Bad argument: expected str or requests.Response'
                         ' or scrapy.http.HtmlResponse, given %s' % type(html)))
+    return html
 
 
 def asp_args(resp):
@@ -38,18 +40,15 @@ def asp_args(resp):
 class Page(object):
     ''' Abstract base class for Page objects.
     '''
-    SLEEP_DURATION = 0
     URL = ''
 
     def __init__(self, sess, html=''):
         assert self.URL, 'Bad Page class: Empty URL'
-        assert self.SLEEP_DURATION, 'Bad Page class: Empty SLEEP_DURATION'
         self.sess = sess
         self.selector = add_selector(html if html else self.get(self.URL))
         self.asp = asp_args(self.selector)
 
-    @classmethod
-    def _ensure(cls, func):
+    def _ensure(func):
         @wraps(func)
         def wrapper(*args, **kw):
             resp = func(*args, **kw)
@@ -60,7 +59,7 @@ class Page(object):
                         raise SessionOutdated
                     message = unquote(resp.url.split('message=')[1])
                     if '刷新' in message:
-                        sleep(cls.SLEEP_DURATION)
+                        sleep(SLEEP_DURATION)
                     else:
                         logger.debug(message)
                     resp = func(*args, **kw)
@@ -84,7 +83,7 @@ class RobustPage(Page):
 
     def __init__(self, sess, html, user, passwd):
         assert self.CHECK_URL, 'Bad Page class: Empty CHECK_URL'
-        super().__init__()
+        super().__init__(sess, html)
         self.user = user
         self.passwd = passwd
 

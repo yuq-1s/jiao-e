@@ -6,7 +6,7 @@
 
     TODO: 
         1. Add argparse to process username and password from CLI
-        2. Decode captcha automatically
+        2. head CHECK_URL immediately after login.
 '''
 
 from requests import Session
