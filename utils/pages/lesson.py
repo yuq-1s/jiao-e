@@ -1,5 +1,7 @@
 from . import Page
-
+from pdb import set_trace
+from .items import Course
+from scrapy.loader import ItemLoader
 
 class LessonPage(Page):
     SLEEP_DURATION = 2
@@ -13,9 +15,16 @@ class LessonPage(Page):
 
     def parse(self):
         for tr in self.selector.css('tr.tdcolour1, tr.tdcolour2'):
-            info = [s.strip() for s in tr.xpath('.//text()').extract() if s.strip()]
-            info.insert(0, tr.xpath('.//input/@value').extract_first())
-            yield info
+            ld = ItemLoader(item=Course(), selector=tr)
+            ld.add_xpath('teacher', './td[2]')
+            ld.add_xpath('teacher_job', './td[3]')
+            ld.add_xpath('cid', './td[4]')
+            ld.add_xpath('hours', './td[5]')
+            ld.add_xpath('max_member', './td[6]')
+            ld.add_xpath('min_member', './td[7]')
+            ld.add_xpath('now_member', './td[9]')
+            ld.add_xpath('time', './td[10]')
+            yield ld.load_item()
 
     def select_course(self, bsid):
         return self.post({'LessonTime1$btnChoose': '选定此教师',
