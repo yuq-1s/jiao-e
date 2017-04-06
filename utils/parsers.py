@@ -10,6 +10,7 @@ def parse_time(s):
                                  r'\((?P<wbegin>\d+)-(?P<wend>\d+)周\)\.',
                                  parity):
             result = match.groupdict()
+            result['day'] = '日一二三四五六'.index(result['day'])
             result.update({'parity': rmk})
             yield result
 
