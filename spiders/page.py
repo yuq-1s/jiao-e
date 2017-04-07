@@ -1,39 +1,14 @@
 from ..login.login import login
+from .selector import add_selector, Selector
+
 from urllib.parse import unquote
 from time import sleep
 from utils import SessionOutdated
 from functools import wraps
-from scrapy.http import HtmlResponse as hr
 import requests
 import logging
 
 logger = logging.getLogger()
-
-
-def add_selector(html):
-    if isinstance(html, str):
-        html = hr(url='', body=html, encoding='utf-8')
-    elif isinstance(html, requests.Response) and not hasattr(html, 'css'):
-        html = hr(url=html.url, body=html.text, encoding='utf-8')
-
-    if not isinstance(html, hr):
-        raise(TypeError('Bad argument: expected str or requests.Response'
-                        ' or scrapy.http.HtmlResponse, given %s' % type(html)))
-    return html
-
-
-def asp_args(response):
-    ''' Parse "__xx" arguments (such as __VIEWSTATE) from HtmlResponse
-    '''
-    if not isinstance(response, hr):
-        response = add_selector(response)
-    ret = {}
-    for tag in response.css('input'):
-        name = tag.xpath('./@name').extract_first()
-        value = tag.xpath('./@value').extract_first()
-        if name and name.startswith('__'):
-            ret.update({name: value})
-    return ret
 
 
 class Page(object):
@@ -47,7 +22,20 @@ class Page(object):
         assert self.SLEEP_DURATION, 'Bad Page class: Empty SLEEP_DURATION'
         self.session = session
         self.selector = add_selector(html if html else self.get(self.URL))
-        self.asp = asp_args(self.selector)
+        self.asp = self.get_asp_args(self.selector)
+
+    def get_asp_args(self, response):
+        ''' Parse "__xx" arguments (such as __VIEWSTATE) from selector
+        '''
+        if not isinstance(response, Selector):
+            selector = add_selector(response)
+        ret = {}
+        for tag in selector.css('input'):
+            name = tag.xpath('./@name').extract_first()
+            value = tag.xpath('./@value').extract_first()
+            if name and name.startswith('__'):
+                ret.update({name: value})
+        return ret
 
     def _ensure(func):
         @wraps(func)
@@ -97,7 +85,7 @@ class RobustPage(Page):
         except SessionOutdated:
             self.refresh()
         except requests.exceptions.HTTPError:
-            self.asp = asp_args(self.get())
+            self.asp = self.get_asp_args(self.get())
 
     def refresh(self):
         self.session = login(self.user, self.passwd)
