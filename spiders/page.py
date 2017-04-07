@@ -1,4 +1,4 @@
-from ..jaccount import login
+from ..login.login import login
 from urllib.parse import unquote
 from time import sleep
 from utils import SessionOutdated
@@ -22,13 +22,13 @@ def add_selector(html):
     return html
 
 
-def asp_args(resp):
+def asp_args(response):
     ''' Parse "__xx" arguments (such as __VIEWSTATE) from HtmlResponse
     '''
-    if not isinstance(resp, hr):
-        resp = add_selector(resp)
+    if not isinstance(response, hr):
+        response = add_selector(response)
     ret = {}
-    for tag in resp.css('input'):
+    for tag in response.css('input'):
         name = tag.xpath('./@name').extract_first()
         value = tag.xpath('./@value').extract_first()
         if name and name.startswith('__'):
@@ -42,54 +42,54 @@ class Page(object):
     URL = ''
     SLEEP_DURATION = 0
 
-    def __init__(self, sess, html=''):
+    def __init__(self, session, html=''):
         assert self.URL, 'Bad Page class: Empty URL'
         assert self.SLEEP_DURATION, 'Bad Page class: Empty SLEEP_DURATION'
-        self.sess = sess
+        self.session = session
         self.selector = add_selector(html if html else self.get(self.URL))
         self.asp = asp_args(self.selector)
 
     def _ensure(func):
         @wraps(func)
         def wrapper(self, *args, **kw):
-            resp = func(self, *args, **kw)
-            resp.raise_for_status()
+            response = func(self, *args, **kw)
+            response.raise_for_status()
             while True:
                 try:
-                    if 'outTimePage.aspx' in resp.url:
+                    if 'outTimePage.aspx' in response.url:
                         raise SessionOutdated
-                    message = unquote(resp.url.split('message=')[1])
+                    message = unquote(response.url.split('message=')[1])
                     if '刷新' in message:
                         sleep(self.SLEEP_DURATION)
                     else:
                         logger.debug(message)
-                    resp = func(self, *args, **kw)
+                    response = func(self, *args, **kw)
                 except IndexError:
-                    return resp
+                    return response
         return wrapper
 
     @_ensure
     def get(self, *args, **kw):
-        return self.sess.get(*args, **kw)
+        return self.session.get(*args, **kw)
 
     @_ensure
     def post(self, data, *args, **kw):
         if '__VIEWSTATE' not in data:
             data.update(self.asp)
-        return self.sess.post(self.URL, data, *args, **kw)
+        return self.session.post(self.URL, data, *args, **kw)
 
 
 class RobustPage(Page):
     CHECK_URL = ''
 
-    def __init__(self, sess, html, user, passwd):
+    def __init__(self, session, html, user, passwd):
         assert self.CHECK_URL, 'Bad Page class: Empty CHECK_URL'
-        super().__init__(sess, html)
+        super().__init__(session, html)
         self.user = user
         self.passwd = passwd
 
-        if not self.sess:
-            self.sess = login(self.user, self.passwd)
+        if not self.session:
+            self.session = login(self.user, self.passwd)
 
     def post(self, *args, **kw):
         try:
@@ -100,5 +100,5 @@ class RobustPage(Page):
             self.asp = asp_args(self.get())
 
     def refresh(self):
-        self.sess = login(self.user, self.passwd)
+        self.session = login(self.user, self.passwd)
         self.head(self.CHECK_URL)

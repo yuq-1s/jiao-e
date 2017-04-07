@@ -6,12 +6,12 @@ from scrapy.loader import ItemLoader
 class LessonPage(Page):
     SLEEP_DURATION = 2
 
-    def __init__(self, sess, html='', url=''):
+    def __init__(self, session, html='', url=''):
         if url:
             self.URL = url
         elif html:
             self.URL = html.url
-        super().__init__(sess, html)
+        super().__init__(session, html)
 
     def parse(self):
         for tr in self.selector.css('tr.tdcolour1, tr.tdcolour2'):

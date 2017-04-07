@@ -1,6 +1,6 @@
 # FIXME Replace HtmlResponse with lxml or something for performance.
 from .. import SUMMER_URL, SUBMIT_URL
-from . import Page
+from .page import Page
 from .lesson import LessonPage
 
 
@@ -17,10 +17,10 @@ class SummerPage(Page):
             yield {'asp': lesson_page.asp, 'course': list(lesson_page.parse())}
 
     def view_course(self, course_id):
-        return LessonPage(self.sess,
+        return LessonPage(self.session,
                           self.post({'myradiogroup': course_id,
                                      'lessonArrange': '课程安排'}))
 
     def submit(self):
-        return self.sess.head(SUBMIT_URL)
+        return self.session.head(SUBMIT_URL)
 

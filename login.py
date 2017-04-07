@@ -28,7 +28,7 @@ def find_between( s, first, last ):
         return ""
 
 def tohttps(oriurl):
-    prot, body = resp.request.url.split(':')
+    prot, body = response.request.url.split(':')
     return prot + 's' + body
 
 def captcha_src(soup):
@@ -38,66 +38,66 @@ def captcha_src(soup):
     raise RuntimeError("Cannot find captcha.")
 
 
-def input_captcha(sess, soup):
-    r = sess.get('https://jaccount.sjtu.edu.cn/jaccount/'+captcha_src(soup),
+def input_captcha(session, soup):
+    r = session.get('https://jaccount.sjtu.edu.cn/jaccount/'+captcha_src(soup),
             stream=True)
     return image_to_string(Image.open(BytesIO(r.content)))
 
-def post_data(sess, soup, user, secret):
+def post_data(session, soup, user, secret):
     form = ['sid', 'returl', 'se', 'v']
 
     data = dict(zip(form, [soup.find('input', {'name': s}).get('value') for s in form]))
     data['user'] = user
     data['pass'] = secret
-    data['captcha'] = input_captcha(sess, soup)
+    data['captcha'] = input_captcha(session, soup)
     return data
 
 def login(user, secret):
     logger = getLogger(__name__)
     try:
         with open('/tmp/cookie.pickle', 'rb') as f:
-            sess = pickle.load(f)
+            session = pickle.load(f)
             # TODO: Verify the sesion is not out dated.
-            return sess
+            return session
     except FileNotFoundError:
         for try_count in range(10):
             # Get Session object
-            sess = Session()
+            session = Session()
 
-            # Store ASP.NetSessionId in sess
-            resp = sess.get('http://electsys.sjtu.edu.cn/edu/login.aspx')
+            # Store ASP.NetSessionId in session
+            response = session.get('http://electsys.sjtu.edu.cn/edu/login.aspx')
 
             # Prepare for post
-            soup = BeautifulSoup(resp.text, 'html.parser')
+            soup = BeautifulSoup(response.text, 'html.parser')
             post_url = 'https://jaccount.sjtu.edu.cn/jaccount/ulogin'
 
             # Post username and password and get authorization url
-            auth_resp = sess.post(post_url, data = post_data(sess, soup, user, secret))
-            soup = BeautifulSoup(auth_resp.text, 'html.parser')
+            auth_response = session.post(post_url, data = post_data(session, soup, user, secret))
+            soup = BeautifulSoup(auth_response.text, 'html.parser')
             try:
                 auth_url = soup.find('meta', {'http-equiv':'refresh'})['content'].split('url=')[1]
 
                 # Get authorized
-                sess.get(auth_url)
+                session.get(auth_url)
 
                 logger.info("Login succeeded!")
                 with open("/tmp/cookie.pickle", 'wb') as f:
-                    pickle.dump(sess, f)
-                return sess# , prepare_form(sess)
+                    pickle.dump(session, f)
+                return session# , prepare_form(session)
             except TypeError:
                 logger.warning("The %d attempt to login failed ..." % try_count)
         logger.error("Login failed...")
         print("Are you sure about the username and password?")
         exit(1)
 
-def prepare_cookie(sess):
+def prepare_cookie(session):
     ele_cookies_list = ['ASP.NET_SessionId', 'mail_test_cookie']
-    return {s: sess.cookies[s] for s in ele_cookies_list}
+    return {s: session.cookies[s] for s in ele_cookies_list}
 
 if __name__ == '__main__':
     print(prepare_cookie(login(argv[1], argv[2])))
 
-# def check_session(sess):
+# def check_session(session):
 #     check_list = ['ASP.NET_SessionId', 'JASiteCookie', 'mail_test_cookie']
-#     resp_check = sess.get('http://electsys.sjtu.edu.cn/edu/student/sdtinfocheck.aspx',
-#             cookies = {s: sess.cookies[s] for s in check_list})
+#     resp_check = session.get('http://electsys.sjtu.edu.cn/edu/student/sdtinfocheck.aspx',
+#             cookies = {s: session.cookies[s] for s in check_list})
