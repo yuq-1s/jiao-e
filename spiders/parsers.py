@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from .selector import add_selector
+from parsel import Selector
 from .items import Course
 
 from abc import ABCMeta, abstractmethod
@@ -17,7 +17,8 @@ class Parser(object):
     __metaclass__ = ABCMeta
 
     def __init__(self, html):
-        self.selector = add_selector(html)
+        html.encoding = 'utf-8'
+        self.selector = Selector(html.text)
 
     def get_asp_args(self):
         ''' Parse "__xx" arguments (such as __VIEWSTATE) from selector
