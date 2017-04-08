@@ -1,3 +1,6 @@
+# FIXME: Get rid of dependency of scrapy.
+''' 解析html的工具，暂时用scrapy的HtmlResponse，以后改用更轻便的。
+'''
 from scrapy.http import HtmlResponse as Selector
 import requests
 

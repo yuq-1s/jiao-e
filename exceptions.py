@@ -1,2 +1,0 @@
-class SessionOutdated(Exception):
-    pass

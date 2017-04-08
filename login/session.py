@@ -4,6 +4,7 @@ from ..login.login import login
 from urllib.parse import unquote
 from time import sleep
 from functools import wraps
+from ..settings import SELECT_COURSE_URL
 from ..settings import NORMAL_CHECK_URL_TEMPLATE, SUMMER_CHECK_URL_TEMPLATE
 import logging
 
@@ -56,6 +57,12 @@ class Session(object):
         self.raw_session = login(self.username, self.password)
         self.head(self.CHECK_URL)
 
+    def select_course(self, bsid, asp_dict):
+        return self.post(url=SELECT_COURSE_URL,
+                         data={'LessonTime1$btnChoose': '选定此教师',
+                               'myradiogroup': bsid},
+                         asp_dict=asp_dict)
+
 
 # FIXME: This should be a singleton.
 class SessionFactory(object):
@@ -65,24 +72,13 @@ class SessionFactory(object):
         self.username = username
         self.password = password
 
-    def create_first_round(self):
-        return self.__create_by_round(1)
-
-    def create_second_round(self):
-        return self.__create_by_round(2)
-
-    def create_third_round(self):
-        return self.__create_by_round(3)
-
-    def __create_by_round(self, r0und):
+    def create(self, description, r0und):
         session = Session(self.username, self.password)
-        session.CHECK_URL = self.CHECK_URL_TEMPLATE % r0und
-        return session
-
-
-class SummerSessionFactory(SessionFactory):
-    CHECK_URL_TEMPLATE = SUMMER_CHECK_URL_TEMPLATE
-
-
-class NormalSessionFactory(SessionFactory):
-    CHECK_URL_TEMPLATE = NORMAL_CHECK_URL_TEMPLATE
+        if description == 'summer':
+            session.CHECK_URL = SUMMER_CHECK_URL_TEMPLATE % r0und
+            return session
+        elif description == 'normal':
+            session.CHECK_URL = NORMAL_CHECK_URL_TEMPLATE % r0und
+            return session
+        else:
+            raise TypeError("ListPage has no type %s" % description)
