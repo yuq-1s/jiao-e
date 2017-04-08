@@ -1,19 +1,22 @@
+# -*- coding: utf-8 -*-
 from ..login.login import login
 
 from urllib.parse import unquote
 from time import sleep
-from .. import SessionOutdated
 from functools import wraps
+from ..settings import NORMAL_CHECK_URL_TEMPLATE, SUMMER_CHECK_URL_TEMPLATE
 import logging
 
 logger = logging.getLogger()
 
 
 class Session(object):
+    # Abstract base class needing CHECK_URL.
     def __init__(self, username, password):
         self.username = username
         self.password = password
-        self.raw_session = login(username, password)
+        self.refresh()
+        logger.debug("Session object initialization complete.")
 
     def _tackle_frequent_requests_error(func):
         @wraps(func)
@@ -23,7 +26,9 @@ class Session(object):
             while True:
                 try:
                     if 'outTimePage.aspx' in response.url:
-                        raise SessionOutdated
+                        self.refresh()
+                        logger.error('Session outdated.')
+                        continue
                     message = unquote(response.url.split('message=')[1])
                     if '刷新' in message:
                         sleep(self.SLEEP_DURATION)
@@ -47,15 +52,37 @@ class Session(object):
     def head(self, *args, **kwargs):
         return self.raw_session.head(*args, **kwargs)
 
-
-class RobustSession(Session):
-    # Abstract base class needing CHECK_URL.
-    def post(self, *args, **kwargs):
-        try:
-            super().post(*args, **kwargs)
-        except SessionOutdated:
-            self.refresh()
-
     def refresh(self):
         self.raw_session = login(self.username, self.password)
         self.head(self.CHECK_URL)
+
+
+# FIXME: This should be a singleton.
+class SessionFactory(object):
+    ''' Abstract session factory with CHECK_URL_TEMPLATE not specified.
+    '''
+    def __init__(self, username, password):
+        self.username = username
+        self.password = password
+
+    def create_first_round(self):
+        return self.__create_by_round(1)
+
+    def create_second_round(self):
+        return self.__create_by_round(2)
+
+    def create_third_round(self):
+        return self.__create_by_round(3)
+
+    def __create_by_round(self, r0und):
+        session = Session(self.username, self.password)
+        session.CHECK_URL = self.CHECK_URL_TEMPLATE % r0und
+        return session
+
+
+class SummerSessionFactory(SessionFactory):
+    CHECK_URL_TEMPLATE = SUMMER_CHECK_URL_TEMPLATE
+
+
+class NormalSessionFactory(SessionFactory):
+    CHECK_URL_TEMPLATE = NORMAL_CHECK_URL_TEMPLATE
