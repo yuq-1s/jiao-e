@@ -1,11 +1,10 @@
 # -*- coding: utf-8 -*-
-from ..login.login import login
+from .login import login
 
 from urllib.parse import unquote
 from time import sleep
 from functools import wraps
-from ..settings import SELECT_COURSE_URL
-from ..settings import NORMAL_CHECK_URL_TEMPLATE, SUMMER_CHECK_URL_TEMPLATE
+from ..settings import SELECT_COURSE_URL, NORMAL_CHECK_URL_TEMPLATE, SUMMER_CHECK_URL_TEMPLATE
 import logging
 
 logger = logging.getLogger()
@@ -72,13 +71,13 @@ class SessionFactory(object):
         self.username = username
         self.password = password
 
-    def create(self, description, r0und):
+    def create(self, description):
         session = Session(self.username, self.password)
-        if description == 'summer':
-            session.CHECK_URL = SUMMER_CHECK_URL_TEMPLATE % r0und
+        if description['type'] == 'summer':
+            session.CHECK_URL = SUMMER_CHECK_URL_TEMPLATE % description['round']
             return session
-        elif description == 'normal':
-            session.CHECK_URL = NORMAL_CHECK_URL_TEMPLATE % r0und
+        elif description['type'] == 'normal':
+            session.CHECK_URL = NORMAL_CHECK_URL_TEMPLATE % description['round']
             return session
         else:
-            raise TypeError("ListPage has no type %s" % description)
+            raise ValueError("ListPage has no type %s" % description)

@@ -1,6 +1,9 @@
+# -*- coding: utf-8 -*-
+
 from scrapy import Field, Item
 from scrapy.loader.processors import MapCompose, TakeFirst
 from w3lib.html import remove_tags
+import json
 import re
 
 
@@ -34,7 +37,10 @@ class Course(Item):
                     output_processor=TakeFirst())
     teacher_job = Field(input_processor=MapCompose(remove_tags, str.strip),
                         output_processor=TakeFirst())
-    time = Field(input_processor=MapCompose(remove_tags, parse_time))
+    time = Field(input_processor=MapCompose(remove_tags,
+                                            lambda s:
+                                            json.dumps(list(parse_time((s))))),
+                 output_processor=TakeFirst())
     cid = Field(input_processor=MapCompose(remove_tags, lambda s: re.search('\w{2}\d{3}', s).group(0)),
                 output_processor=TakeFirst())
     hours = Field(input_processor=MapCompose(remove_tags, int),
@@ -50,4 +56,6 @@ class Course(Item):
     course_type = Field(output_processor=TakeFirst())
     place = Field(input_processor=TakeFirst())
     bsid = Field(input_processor=lambda s: int(s[0]),
+                 output_processor=TakeFirst())
+    asp = Field(input_processor=MapCompose(remove_tags, str.strip),
                  output_processor=TakeFirst())

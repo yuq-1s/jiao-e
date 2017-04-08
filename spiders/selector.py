@@ -9,6 +9,7 @@ def add_selector(html):
     if isinstance(html, str):
         html = Selector(url='', body=html, encoding='utf-8')
     elif isinstance(html, requests.Response) and not hasattr(html, 'css'):
+        html.encoding = 'utf-8'
         html = Selector(url=html.url, body=html.text, encoding='utf-8')
 
     if not isinstance(html, Selector):

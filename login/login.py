@@ -11,7 +11,6 @@
 
 from requests import Session
 from sys import argv, exit
-from pdb import set_trace
 from bs4 import BeautifulSoup
 from PIL import Image
 from io import BytesIO

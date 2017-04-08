@@ -1,4 +1,6 @@
-from .selector import add_selector, Selector
+# -*- coding: utf-8 -*-
+
+from .selector import add_selector
 from .items import Course
 
 from abc import ABCMeta, abstractmethod
@@ -15,8 +17,8 @@ class Parser(object):
     '''
     __metaclass__ = ABCMeta
 
-    def __init__(self, html=''):
-        self.selector = add_selector(html if html else self.get(self.url))
+    def __init__(self, html):
+        self.selector = add_selector(html)
 
     def get_asp_args(self):
         ''' Parse "__xx" arguments (such as __VIEWSTATE) from selector
@@ -49,15 +51,24 @@ class LessonParser(Parser):
             ld.add_xpath('time', './td[10]')
             ld.add_xpath('remark', './td[11]')
             ld.add_value('asp', json.dumps(self.get_asp_args()))
-            yield ld.load_item()
+            yield vars(ld.load_item())['_values']
 
 
-# TODO
+# TODO: Add a local cache for pages.
 class SpiderParser(Parser):
-    def parser(self):
-        for cid in self.selector.css('input[type=radio]') \
-                .xpath('./@value').extract():
-            yield cid
+    def parse(self):
+        for tr in self.selector.css('tr.tdcolour1, tr.tdcolour2'):
+            yield {'cid': tr.xpath('./td[3]/text()').extract_first().strip(),
+                   'name': tr.xpath('./td[2]/text()').extract_first().strip(),
+                   'type': tr.xpath('./td[5]/text()').extract_first().strip(),
+                   'credit': tr.xpath('./td[6]/text()').extract_first().strip(),
+                   'hours': tr.xpath('./td[7]/text()').extract_first().strip(),
+                   }
+
+
+class SummerParser(SpiderParser):
+    pass
+
 
 # TODO
 class ParserFactory(object):

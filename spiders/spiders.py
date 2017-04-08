@@ -1,7 +1,6 @@
 # FIXME Replace HtmlResponse with lxml or something for performance.
-from .. import SUMMER_URL, SUBMIT_URL
-from ..login.session import SessionFactory
-from .parsers import ParserFactory, LessonParser
+from .settings import SUMMER_URL, SUBMIT_URL
+from .parsers import LessonParser, SummerParser
 
 from abc import ABCMeta, abstractmethod
 import logging
@@ -14,9 +13,8 @@ class Spider(object):
     # Misssing: url, SUBMIT_URL, session_config, parser_config
     __metaclass__ = ABCMeta
 
-    def __init__(self, username, password):
-        self.session = SessionFactory(username,
-                                      password).create(self.session_config)
+    def __init__(self, session):
+        self.session = session
         self.__refresh_parser()
 
     def _get(self, *args, **kwargs):
@@ -35,7 +33,8 @@ class Spider(object):
                 self.__refresh_parser()
 
     def __refresh_parser(self):
-        self.parser = ParserFactory(self.session).create(self.parser_config)
+        # FIXME: Use a factory.
+        self.parser = SummerParser(self.session.get(self.url))
         self.asp_dict = self.parser.get_asp_args()
 
     def get_current_number_by_course_id(self, course_id):
@@ -69,11 +68,9 @@ class Spider(object):
         pass
 
 
-# TODO: Add a local cache for pages.
 class SummerSpider(Spider):
     url = SUMMER_URL
     SUBMIT_URL = SUBMIT_URL
-    description = {}
 
     def crawl_one_course_by_course_id(self, course_id):
         inner_parser = LessonParser(self._post({'myradiogroup': course_id,
@@ -86,10 +83,11 @@ class SummerSpider(Spider):
     # FIXME: 这个代码重复修一下.
     def crawl(self):
         for outer_info in self.parser.parse():
-            inner_parser = LessonParser(self._post({'myradiogroup':
-                                                    outer_info['cid'],
-                                                    'lessonArrange':
-                                                    '课程安排'}))
+            inner_parser = LessonParser(self._post(url=self.url,
+                                                   data={'myradiogroup':
+                                                         outer_info['cid'],
+                                                         'lessonArrange':
+                                                         '课程安排'}))
             for inner_info in inner_parser.parse():
                 inner_info.update(outer_info)
                 yield inner_info
