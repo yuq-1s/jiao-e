@@ -4,17 +4,16 @@ from parsel import Selector
 from .items import Course
 
 from abc import ABCMeta, abstractmethod
-from scrapy.loader import ItemLoader
+from .loader import ItemLoader
 import json
 import logging
 
 logger = logging.getLogger()
 
 
-class Parser(object):
+class Parser(object, metaclass=ABCMeta):
     ''' 解析抓到的页面的类
     '''
-    __metaclass__ = ABCMeta
 
     def __init__(self, html):
         html.encoding = 'utf-8'

@@ -1,7 +1,6 @@
-# -*- coding: utf-8 -*-
+from .loader.item import Field, Item
+from .loader.processors import MapCompose, TakeFirst
 
-from scrapy import Field, Item
-from scrapy.loader.processors import MapCompose, TakeFirst
 from w3lib.html import remove_tags
 import json
 import re
@@ -58,4 +57,4 @@ class Course(Item):
     bsid = Field(input_processor=lambda s: int(s[0]),
                  output_processor=TakeFirst())
     asp = Field(input_processor=MapCompose(remove_tags, str.strip),
-                 output_processor=TakeFirst())
+                output_processor=TakeFirst())

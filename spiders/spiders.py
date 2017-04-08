@@ -1,5 +1,5 @@
 # FIXME Replace HtmlResponse with lxml or something for performance.
-from .settings import SUMMER_URL, SUMMER_SUBMIT_URL
+from ..settings import SUMMER_URL, SUMMER_SUBMIT_URL
 from .parsers import LessonParser, SummerParser
 
 from abc import ABCMeta, abstractmethod
@@ -9,9 +9,8 @@ import requests
 logger = logging.getLogger(__name__)
 
 
-class Spider(object):
+class Spider(object, metaclass=ABCMeta):
     # Misssing: url, SUBMIT_URL, session_config, parser_config
-    __metaclass__ = ABCMeta
 
     def __init__(self, session):
         self.session = session
