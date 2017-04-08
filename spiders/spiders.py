@@ -1,5 +1,5 @@
 # FIXME Replace HtmlResponse with lxml or something for performance.
-from .settings import SUMMER_URL, SUBMIT_URL
+from .settings import SUMMER_URL, SUMMER_SUBMIT_URL
 from .parsers import LessonParser, SummerParser
 
 from abc import ABCMeta, abstractmethod
@@ -18,12 +18,15 @@ class Spider(object):
         self.__refresh_parser()
 
     def _get(self, *args, **kwargs):
-        return self.session.get(*args, **kwargs)
+        return self.session.get(url=self.url, *args, **kwargs)
 
-    def _post(self, url, data, *args, **kwargs):
+    def _post(self, data, *args, **kwargs):
+        ''' 用self.url和asp_dict包装一下session的post，自动带上__VIEWSTATE之类
+            的东西
+        '''
         while True:
             try:
-                return self.session.post(url=url,
+                return self.session.post(url=self.url,
                                          data=data,
                                          asp_dict=self.asp_dict,
                                          *args,
@@ -33,15 +36,23 @@ class Spider(object):
                 self.__refresh_parser()
 
     def __refresh_parser(self):
-        # FIXME: Use a factory.
-        self.parser = SummerParser(self.session.get(self.url))
+        ''' 如果__VIEWSTATE之类的东西过期了就调用这个
+        '''
+        # FIXME: Use a parser factory here.
+        self.parser = SummerParser(self._get())
         self.asp_dict = self.parser.get_asp_args()
 
     def get_current_number_by_course_id(self, course_id):
+        ''' 给一个cid，查询当前改课所有老师的选课人数
+        '''
         for info in self.crawl_by_course_id(course_id):
             yield {info['bsid']: info['now_number']}
 
     def grab_course_by_bsid(self, bsid):
+        ''' 给定bsid，持续选，直到成功。
+            什么情况都不报错。
+            课满了不报错，session或者__VIEWSTATE过期了更新一下继续刷，也不报错
+        '''
         while True:
             response = self.session.select_course(bsid)
             if response.url == self.url:
@@ -49,6 +60,8 @@ class Spider(object):
                 return True
 
     def _submit(self):
+        ''' 进行选课提交
+        '''
         self.session.head(self.SUBMIT_URL)
 
     @abstractmethod
@@ -70,7 +83,7 @@ class Spider(object):
 
 class SummerSpider(Spider):
     url = SUMMER_URL
-    SUBMIT_URL = SUBMIT_URL
+    SUBMIT_URL = SUMMER_SUBMIT_URL
 
     def crawl_one_course_by_course_id(self, course_id):
         inner_parser = LessonParser(self._post({'myradiogroup': course_id,
@@ -83,8 +96,7 @@ class SummerSpider(Spider):
     # FIXME: 这个代码重复修一下.
     def crawl(self):
         for outer_info in self.parser.parse():
-            inner_parser = LessonParser(self._post(url=self.url,
-                                                   data={'myradiogroup':
+            inner_parser = LessonParser(self._post(data={'myradiogroup':
                                                          outer_info['cid'],
                                                          'lessonArrange':
                                                          '课程安排'}))

@@ -11,6 +11,8 @@ logger = logging.getLogger()
 
 
 class Session(object):
+    ''' 包装requests.session，进行登录后的验证和处理教务网的message和session过期
+    '''
     # Abstract base class needing CHECK_URL.
     def __init__(self, username, password):
         self.username = username
@@ -19,6 +21,8 @@ class Session(object):
         logger.debug("Session object initialization complete.")
 
     def _tackle_frequent_requests_error(func):
+        ''' 处理页面过期和频繁刷新页面的提示
+        '''
         @wraps(func)
         def wrapper(self, *args, **kwargs):
             response = func(self, *args, **kwargs)

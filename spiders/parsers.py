@@ -12,8 +12,7 @@ logger = logging.getLogger()
 
 
 class Parser(object):
-    ''' Abstract base class for Page objects.
-        Needing url
+    ''' 解析抓到的页面的类
     '''
     __metaclass__ = ABCMeta
 
