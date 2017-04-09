@@ -1,5 +1,5 @@
 from ..settings import (SELECT_COURSE_URL, NORMAL_CHECK_URL_TEMPLATE,
-                        EDU_URL, SUMMER_CHECK_URL_TEMPLATE, JACCOUNT_URL)
+                       ELE_LOGIN_URL, SUMMER_CHECK_URL_TEMPLATE, JACCOUNT_URL)
 
 from urllib.parse import unquote
 from time import sleep
@@ -39,7 +39,7 @@ class Session(object):
         except FileNotFoundError:
             for try_count in range(self.MAX_LOGIN_TRAIL):
                 self.raw_session = requests.Session()
-                jaccount_response = self.raw_session.get(EDU_URL+'login.aspx')
+                jaccount_response = self.raw_session.get(ELE_LOGIN_URL)
                 form = dict(__parse_jaccount_page(jaccount_response.text))
                 captcha_url = JACCOUNT_URL + re.search(
                     r'\<img src=\"(captcha\?\d+)\"',
@@ -57,6 +57,7 @@ class Session(object):
                     logger.info("Login succeeded!")
                     with open("/tmp/session.pickle", 'wb') as f:
                         pickle.dump(self.raw_session, f)
+                    return
                 else:
                     logger.warning("The %d attempt to login failed ..." % try_count)
             logger.error("Login failed...")
