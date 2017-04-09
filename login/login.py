@@ -73,17 +73,12 @@ def login(user, secret):
             # Post username and password and get authorization url
             auth_response = session.post(post_url, data = post_data(session, soup, user, secret))
             soup = BeautifulSoup(auth_response.text, 'html.parser')
-            try:
-                auth_url = soup.find('meta', {'http-equiv':'refresh'})['content'].split('url=')[1]
-
-                # Get authorized
-                session.get(auth_url)
-
+            if '教学信息服务网' in auth_response.text:
                 logger.info("Login succeeded!")
                 with open("/tmp/cookie.pickle", 'wb') as f:
                     pickle.dump(session, f)
                 return session# , prepare_form(session)
-            except TypeError:
+            else:
                 logger.warning("The %d attempt to login failed ..." % try_count)
         logger.error("Login failed...")
         print("Are you sure about the username and password?")
