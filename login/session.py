@@ -1,16 +1,22 @@
-# -*- coding: utf-8 -*-
-from .login import login
+from ..settings import (SELECT_COURSE_URL, NORMAL_CHECK_URL_TEMPLATE,
+                        EDU_URL, SUMMER_CHECK_URL_TEMPLATE, JACCOUNT_URL)
 
 from urllib.parse import unquote
 from time import sleep
 from functools import wraps
-from ..settings import SELECT_COURSE_URL, NORMAL_CHECK_URL_TEMPLATE, SUMMER_CHECK_URL_TEMPLATE
+from PIL import Image
+from io import BytesIO
+from pytesseract import image_to_string
+import requests
 import logging
+import re
+import pickle
 
 logger = logging.getLogger()
 
 
 class Session(object):
+    MAX_LOGIN_TRAIL = 10
     ''' 包装requests.session，进行登录后的验证和处理教务网的message和session过期
     '''
     # Abstract base class needing CHECK_URL.
@@ -19,6 +25,43 @@ class Session(object):
         self.password = password
         self.refresh()
         logger.debug("Session object initialization complete.")
+
+    def _login(self):
+        def __parse_jaccount_page(html):
+            search_pattern = r'\<input type=\"hidden\" name=\"(\w+)\" value=\"([a-zA-Z0-9_+/=]+)\"\>'
+            for match in re.finditer(search_pattern, html):
+                yield match.groups()
+
+        try:
+            with open('/tmp/session.pickle', 'rb') as f:
+                # TODO: Verify the sesion is not out dated.
+                self.raw_session = pickle.load(f)
+        except FileNotFoundError:
+            for try_count in range(self.MAX_LOGIN_TRAIL):
+                self.raw_session = requests.Session()
+                jaccount_response = self.raw_session.get(EDU_URL+'login.aspx')
+                form = dict(__parse_jaccount_page(jaccount_response.text))
+                captcha_url = JACCOUNT_URL + re.search(
+                    r'\<img src=\"(captcha\?\d+)\"',
+                    jaccount_response.text).group(1)
+                captcha = image_to_string(Image.open(BytesIO(
+                    self.raw_session.get(captcha_url, stream=True).content)))
+                form.update({'v': '',
+                             'user': self.username,
+                             'pass': self.password,
+                             'captcha': captcha})
+
+                post_response = self.raw_session.post(
+                    JACCOUNT_URL+'ulogin', data=form)
+                if '教学信息服务网' in post_response.text:
+                    logger.info("Login succeeded!")
+                    with open("/tmp/session.pickle", 'wb') as f:
+                        pickle.dump(self.raw_session, f)
+                else:
+                    logger.warning("The %d attempt to login failed ..." % try_count)
+            logger.error("Login failed...")
+            print("Are you sure about the username and password?")
+            exit(1)
 
     def _tackle_frequent_requests_error(func):
         ''' 处理页面过期和频繁刷新页面的提示
@@ -57,7 +100,7 @@ class Session(object):
         return self.raw_session.head(*args, **kwargs)
 
     def refresh(self):
-        self.raw_session = login(self.username, self.password)
+        self.raw_session = self._login()
         self.head(self.CHECK_URL)
 
     def select_course(self, bsid, asp_dict):
